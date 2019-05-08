@@ -1,6 +1,7 @@
 package template
 
 import (
+	"fmt"
 	"reflect"
 	"unsafe"
 )
@@ -9,6 +10,7 @@ import (
 type Engine struct {
 	instructions []func(unsafe.Pointer, *Buffer) // instruction set
 	f            reflect.StructField             // current field
+	tpl          []byte                          // current template bytes
 	t            interface{}                     // type
 	i            int                             // iter
 	cb           Buffer                          // side buffer for static data
@@ -29,24 +31,38 @@ func (e *Engine) Execute(v interface{}, w *Buffer) {
 func New(template []byte, t interface{}) *Engine {
 	e := &Engine{}
 	e.t = t
+	e.tpl = template
 	// tt := reflect.TypeOf(t)
 
 	// e.chunk(string(template))
 
-	for e.i = 0; e.i < len(template); e.i++ {
+	for e.i = 0; e.i < len(e.tpl); e.i++ {
 
-		switch b := template[e.i]; {
-		case b == '{' && template[e.i+1] == '{':
-			e.i++
+		switch b := e.tpl[e.i]; {
+		case e.peekAdv(`{` + `{`):
 			e.flunk()
 			// value instruction
 
-			// val := e.readVal()
+			val, n := e.readVal()
+			e.i += n
 
-			// println(val)
+			println(fmt.Sprint(val, " ", n))
+
+			r, _ := reflect.TypeOf(e.t).FieldByName(val)
+
+			switch r.Type.Kind() {
+
+			case reflect.String:
+				e.instructions = append(e.instructions, func(p unsafe.Pointer, w *Buffer) {
+					ptrStringToBuf(unsafe.Pointer(uintptr(p)+r.Offset), w)
+				})
+			}
+
+			println(fmt.Sprint(r))
 
 		default:
 			// add to static chunk
+			// println(fmt.Sprint(string(b)))
 			e.chunkb(b)
 		}
 	}
@@ -55,9 +71,44 @@ func New(template []byte, t interface{}) *Engine {
 	return e
 }
 
-func (e *Engine) readVal() string {
+func (e *Engine) readVal() (o string, l int) {
 
-	return ""
+	// this is garbage
+
+	var reading bool
+	for i := e.i; i < len(e.tpl); i++ {
+		l++
+
+		switch b := e.tpl[i]; {
+
+		case b == '}' && e.tpl[i+1] == '}':
+			// l++
+			println("end")
+			return
+
+		case reading && b == ' ':
+			reading = false
+
+		case !reading && b == '.':
+			reading = true
+
+		case reading:
+			o += string(e.tpl[i])
+
+		}
+	}
+
+	return "", 0
+}
+
+func (e *Engine) peekAdv(p string) bool {
+
+	if l := len(p); e.i+l < len(e.tpl) && string(e.tpl[e.i:e.i+l]) == p {
+		e.i += l
+		return true
+	}
+
+	return false
 }
 
 // chunk writes a chunk of body data to the chunk buffer. only for writing static

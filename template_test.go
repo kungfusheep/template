@@ -15,12 +15,12 @@ var (
 	test = []byte(`
 <html>
     <body>
-        <h1>{{ .FirstName }}</h1>
+        <h1>Hi {{ .FirstName }}</h1>
 
         <p>Here's a list of your favorite colors:</p>
         <ul>
-        {{ range .FavoriteColors }}
-            <li>{{ . }}</li>{{ end }}
+        { { range .FavoriteColors }} <------broken....
+            <li>{ { . }}</li>{ { end }}
         </ul>
     </body>
 </html>
@@ -73,4 +73,17 @@ func BenchmarkJetHTMLTemplate(b *testing.B) {
 		}
 		buf.Reset()
 	}
+}
+
+func ExampleJetHTMLTemplate() {
+	var buf bytes.Buffer
+
+	tmpl, _ := jetSet.GetTemplate("simple.jet")
+
+	tmpl.Execute(&buf, nil, testData)
+
+	println(buf.String())
+
+	// Output:
+	// garbbs
 }
