@@ -38,3 +38,11 @@ testing a template engine based on ideas behind jingo vs JetHTML
 </html>
 
 ```
+
+## current numbers
+
+```text
+BenchmarkTemplate-16                    38205490                28.1 ns/op             0 B/op          0 allocs/op
+BenchmarkTemplateWithPool-16            29728286                39.9 ns/op             0 B/op          0 allocs/op
+BenchmarkJetHTMLTemplate-16              3925189               302 ns/op              32 B/op          1 allocs/op
+```
